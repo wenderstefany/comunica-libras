@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comunica Libras | Tradutor interno</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172033}
+header{background:#173b72;color:#fff;padding:22px 28px}
+h1{margin:0 0 5px;font-size:27px}.sub{opacity:.9}
+main{max-width:1050px;margin:24px auto;padding:0 18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{background:#fff;border-radius:16px;padding:22px;box-shadow:0 5px 20px #00000012}
+h2{font-size:20px;margin-top:0}textarea{width:100%;min-height:150px;border:1px solid #ccd5e2;border-radius:10px;padding:13px;font-size:17px;resize:vertical}
+button{border:0;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer;margin:7px 5px 0 0;background:#173b72;color:white}
+button.secondary{background:#e8eef7;color:#173b72}.status{margin-top:12px;font-size:14px;color:#526174}
+.cam{width:100%;aspect-ratio:16/9;background:#111;border-radius:12px;object-fit:cover}
+.notice{background:#fff8df;border-left:4px solid #e0a800;padding:13px;margin-top:18px;border-radius:8px;line-height:1.45}
+.quick{display:flex;flex-wrap:wrap;gap:7px}.quick button{margin:0;font-size:13px}
+@media(max-width:750px){.grid{grid-template-columns:1fr}main{padding:0 10px}}
+</style>
+</head>
+<body>
+<header><h1>Comunica Libras</h1><div class="sub">Tradutor de apoio à comunicação entre colaboradores ouvintes e surdos</div></header>
+<main>
+<div class="grid">
+<section class="card">
+<h2>🗣️ Português → Libras</h2>
+<p>Digite ou fale. O VLibras abrirá o avatar para sinalizar a mensagem.</p>
+<textarea id="txt" placeholder="Ex.: Bom dia, sua reunião será às 14 horas."></textarea>
+<div>
+<button onclick="traduzir()">Traduzir para Libras</button>
+<button class="secondary" onclick="falar()">🎤 Falar</button>
+<button class="secondary" onclick="limpar()">Limpar</button>
+</div>
+<div class="quick">
+<button class="secondary" onclick="setText('Bom dia! Como posso ajudar você?')">Bom dia</button>
+<button class="secondary" onclick="setText('Você precisa de ajuda?')">Precisa de ajuda?</button>
+<button class="secondary" onclick="setText('Sua reunião será às 14 horas.')">Reunião</button>
+<button class="secondary" onclick="setText('Por favor, aguarde um momento.')">Aguarde</button>
+</div>
+<div class="status" id="status">Pronto.</div>
+</section>
+
+<section class="card">
+<h2>👋 Libras → Português</h2>
+<p>Use a câmera para a comunicação visual. Este protótipo prepara o canal de câmera, mas o reconhecimento automático de Libras precisa de um modelo de visão computacional treinado especificamente para Libras.</p>
+<video id="video" class="cam" autoplay muted playsinline></video>
+<button onclick="camera()">📷 Ativar câmera</button>
+<button class="secondary" onclick="pararCamera()">Parar câmera</button>
+<div class="status" id="camStatus">Câmera desligada.</div>
+</section>
+</div>
+
+<div class="card" style="margin-top:18px">
+<h2>⌨️ Alternativa rápida para o colaborador surdo</h2>
+<p>Enquanto o reconhecimento por câmera não estiver instalado, o colaborador pode escrever a mensagem abaixo; ela fica grande na tela para facilitar a leitura.</p>
+<textarea id="surdo" placeholder="Digite aqui sua mensagem..."></textarea>
+<button onclick="mostrar()">Mostrar mensagem grande</button>
+<div id="grande" style="display:none;margin-top:15px;padding:25px;border-radius:12px;background:#eef4ff;font-size:30px;font-weight:700;text-align:center"></div>
+</div>
+
+<div class="notice">
+<strong>Importante:</strong> esta página usa o VLibras para Português → Libras. O VLibras é uma ferramenta de tradução automática e não substitui um intérprete humano; traduções automáticas podem apresentar inconsistências de contexto.
+</div>
+</main>
+
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>
+new window.VLibras.Widget({
+  rootPath:'https://vlibras.gov.br/app',
+  avatar:'random',
+  position:'R'
+});
+
+function setText(t){document.getElementById('txt').value=t}
+function limpar(){document.getElementById('txt').value='';document.getElementById('status').textContent='Pronto.'}
+function traduzir(){
+ const t=document.getElementById('txt').value.trim();
+ if(!t){document.getElementById('status').textContent='Digite uma mensagem primeiro.';return}
+ document.getElementById('status').textContent='Mensagem preparada. Clique no botão do VLibras para sinalizar o texto.';
+}
+function falar(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){alert('Seu navegador não oferece reconhecimento de voz. Use o Google Chrome.');return}
+ const r=new SR();r.lang='pt-BR';r.interimResults=false;r.continuous=false;
+ document.getElementById('status').textContent='🎤 Ouvindo...';
+ r.onresult=e=>{document.getElementById('txt').value=e.results[0][0].transcript;document.getElementById('status').textContent='Voz convertida em texto. Agora use o VLibras.'};
+ r.onerror=()=>document.getElementById('status').textContent='Não foi possível captar a voz.';
+ r.start();
+}
+let stream=null;
+async function camera(){
+ try{stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});document.getElementById('video').srcObject=stream;document.getElementById('camStatus').textContent='Câmera ativa.'}
+ catch(e){document.getElementById('camStatus').textContent='Permissão de câmera não concedida.'}
+}
+function pararCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}document.getElementById('video').srcObject=null;document.getElementById('camStatus').textContent='Câmera desligada.'}
+function mostrar(){const t=document.getElementById('surdo').value.trim();const g=document.getElementById('grande');g.textContent=t;g.style.display=t?'block':'none'}
+</script>
+</body></html>
